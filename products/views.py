@@ -1,15 +1,11 @@
+from rest_framework.views import APIView
 from django.http import JsonResponse
-from products.forms import ProductForm
+from rest_framework.response import Response
 from products.models import Products
-from django.views.decorators.csrf import csrf_exempt
+from products.serializers import  ProductsSerializerV3
+from rest_framework import generics
 
-@csrf_exempt
-def get_products(request):
-    if request.method == 'GET':
-        return JsonResponse(list(Products.objects.all().values('name','price')),safe=False)
-    elif request.method == 'POST':
-        form = ProductForm(request.POST)
-        if form.is_valid():
-             form.save()
-        return JsonResponse({'result':'okay'})
-    return JsonResponse({'error': 'not okay'})
+
+class ProductsGenericView(generics.ListAPIView):
+    queryset = Products.objects.all()
+    serializer_class = ProductsSerializerV3
