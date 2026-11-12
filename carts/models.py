@@ -6,12 +6,18 @@ from products.models import Products
 
 
 
+
+
+
 class Cart(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def total_price(self):
+        return sum(item.total_price() for item in self.items.all())
 
     def __str__(self):
         return self.user.username
@@ -23,11 +29,16 @@ class CartItem(models.Model):
         on_delete=models.CASCADE,
         related_name='items'
     )
+
     product = models.ForeignKey(
         Products,
         on_delete=models.CASCADE
     )
+
     quantity = models.PositiveIntegerField(default=1)
 
     def total_price(self):
         return self.product.price * self.quantity
+
+    def __str__(self):
+        return self.product.name
