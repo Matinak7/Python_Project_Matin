@@ -1,13 +1,18 @@
-from django.db import transaction
-from products.models import Products
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from carts.models import Cart
-from orders.models import Order, OrderItem
+from orders.models import Order
 from orders.serializers import OrderSerializer
+from orders.services import create_order
+from carts.models import Cart
+
+
+
+
+
+
 
 
 
@@ -31,80 +36,30 @@ class OrderView(APIView):
 
     def post(self, request):
 
-        with transaction.atomic():
+        try:
+            order = create_order(request.user)
 
-            cart = get_object_or_404(
-                Cart.objects.select_for_update(),
-                user=request.user
-            )
-
-            cart_items = list(
-                cart.items.select_related('product').all()
-            )
-
-            if not cart_items:
-                return Response(
-                    {'error': 'Your cart is empty'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            total_price = 0
-            order_products = []
-
-            for item in cart_items:
-
-                if item.quantity <= 0:
-                    return Response(
-                        {'error': 'Invalid product quantity'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                product = Products.objects.select_for_update().get(
-                    pk=item.product_id
-                )
-
-                if product.count < item.quantity:
-                    return Response(
-                        {
-                            'error': f'Not enough stock for {product.name}'
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                total_price += product.price * item.quantity
-
-                order_products.append((item, product))
-
-            order = Order.objects.create(
-                user=request.user,
-                total_price=total_price
-            )
-
-            for item, product in order_products:
-
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    product_name=product.name,
-                    price=product.price,
-                    quantity=item.quantity
-                )
-
-                product.count -= item.quantity
-
-                product.save(update_fields=['count'])
-
-            cart.items.all().delete()
-
-            serializer = OrderSerializer(order)
-
+        except Cart.DoesNotExist:
             return Response(
-                {
-                    'message': 'Order created successfully',
-                    'order': serializer.data
-                },
-                status=status.HTTP_201_CREATED
+                {'error': 'Cart not found'},
+                status=status.HTTP_404_NOT_FOUND
             )
+
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = OrderSerializer(order)
+
+        return Response(
+            {
+                'message': 'Order created successfully',
+                'order': serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 class OrderDetailView(APIView):
