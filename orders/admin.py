@@ -6,6 +6,8 @@ from orders.models import Order, OrderItem
 
 
 
+
+
 class OrderItemInline(admin.TabularInline):
 
     model = OrderItem
