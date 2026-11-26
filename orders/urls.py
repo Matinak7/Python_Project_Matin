@@ -4,8 +4,6 @@ from orders.views import OrderView, OrderDetailView
 
 
 
-
-
 urlpatterns = [
     path('', OrderView.as_view(), name='orders'),
 

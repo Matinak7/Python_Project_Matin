@@ -2,11 +2,6 @@ from rest_framework import serializers
 from orders.models import Order, OrderItem
 
 
-
-
-
-
-
 class OrderItemSerializer(serializers.ModelSerializer):
 
     total_price = serializers.SerializerMethodField()
@@ -33,6 +28,14 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
+            'id',
+            'total_price',
+            'status',
+            'created_at',
+            'items'
+        ]
+
+        read_only_fields = [
             'id',
             'total_price',
             'status',
