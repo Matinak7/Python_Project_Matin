@@ -7,13 +7,6 @@ from orders.models import Order, OrderItem
 
 
 
-
-
-
-
-
-
-
 @transaction.atomic
 def create_order(user):
 
@@ -68,5 +61,30 @@ def create_order(user):
         product.save(update_fields=['count'])
 
     cart.items.all().delete()
+
+    return order
+
+
+@transaction.atomic
+def cancel_order(user, order_id):
+
+    order = Order.objects.select_for_update().get(
+        id=order_id,
+        user=user
+    )
+
+    if order.status not in ('pending', 'processing'):
+        raise ValueError('This order cannot be cancelled')
+
+    for item in order.items.all():
+        if item.product_id:
+            product = Products.objects.select_for_update().get(
+                id=item.product_id
+            )
+            product.count += item.quantity
+            product.save(update_fields=['count'])
+
+    order.status = 'cancelled'
+    order.save(update_fields=['status'])
 
     return order

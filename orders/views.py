@@ -5,15 +5,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from orders.models import Order
 from orders.serializers import OrderSerializer
-from orders.services import create_order
+from orders.services import create_order, cancel_order
 from carts.models import Cart
-
-
-
-
-
-
-
 
 
 
@@ -77,3 +70,30 @@ class OrderDetailView(APIView):
         serializer = OrderSerializer(order)
 
         return Response(serializer.data)
+
+
+class OrderCancelView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+
+        try:
+            order = cancel_order(request.user, order_id)
+
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Order not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response({
+            'message': 'Order cancelled successfully',
+            'order': OrderSerializer(order).data
+        })
